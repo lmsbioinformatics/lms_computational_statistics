@@ -10,95 +10,161 @@
 
 # 2. Plot both distributions as a histogram
 
-# 3. Compute manually a one-sample t-statistic, and a P-value by computing the cumulative probabiltiy of the t distribution
+# 3. Compute manually a chi2-statistic and compare with scipy implementation: Use the stats.ttest_ind() library
 
-# 4. Compare with scipy implementation: Use the stats.ttest_1samp library
+# 4. Plot the chi2 distribution with the observed chi2 statistic, and a shaded area representing the one-sided p-value
+
+# 5. Plot the chi2 distribution with the observed chi2 statistic, and a shaded area representing the two-sided p-value
 
 
 
-# Import libraries ................................................................................
+# Import libraries ....................................................................................................
 
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy.stats import chisquare, chi2, norm
-from scipy.integrate import quad
-
-print("\nPearson chi2-test:\nCompare expected and observed distributions")
+from scipy.stats import chi2, chisquare
 
 
 
-# Load data .......................................................................................
+# Load data ...........................................................................................................
 print("\nLoading data")
 
+# Read csv data with pandas
+df_control = pd.read_csv("data/exp_control.csv")
+df_mutant = pd.read_csv("data/exp_mutant1.csv")
+# print("\nControl format:\n", type(df_control))
+# print("Control expression:\n", df_control.head())
+# print("\nMutant format:\n", type(df_mutant))
+# print("Mutant expression:\n", df_mutant.head())
 
-# Random seed
-np.random.seed(123)
+# Extract values as numpy ndarray
+control_expr = df_control["avg_expression"].values
+mutant_expr = df_mutant["avg_expression"].values
+# print("\nControl format:\n", type(control_expr))
+# print("Control expression:\n", control_expr[:5])
+# print("\nMutant format:\n", type(mutant_expr))
+# print("Mutant expression:\n", mutant_expr[:5])
 
-# Formulate hypotheses
-# H0: Data follows a normal distribution
-# H1: Data does not follow a normal distribution
 
-# Generate random data sampling from gaussian
-sample_size = 100
-# observed_data = np.random.normal(loc = 0, scale = 1, size = sample_size)
-observed_data = np.random.randint(0, 10, size = sample_size)
 
-# Generate points normal distribution
-x = np.linspace(observed_data.min(), observed_data.max(), 500)
-y = norm.pdf(x, loc = np.mean(observed_data), scale = np.std(observed_data))
+# Visual inspection: histogram ........................................................................................
 
-# Define bins and calculate observed frequencies
-num_bins = 10
-bin_edges = np.linspace(observed_data.min(), observed_data.max(), num_bins + 1)
-hist, _ = np.histogram(observed_data, bins = bin_edges)
+bins = 30
 
-# Plot observations and gaussian fit
-plt.figure(figsize = (8, 6))
-plt.hist(observed_data, bins = num_bins, density = True, alpha = 0.6, color = "skyblue", label = "observed Data")
-plt.plot(x, y, "r-", label = "Normal Distribution")
-plt.title("Histogram of observations")
-plt.xlabel("Value")
-plt.ylabel("Density")
+# Plot histogram
+plt.figure(figsize = (8, 5))
+plt.hist(control_expr, bins = bins, alpha = 0.5, label = "Control", edgecolor = "black", linewidth = 0.8)
+plt.hist(mutant_expr, bins = bins, alpha = 0.5, label = "Mutant", edgecolor = "black", linewidth = 0.8)
+plt.axvline(np.mean(control_expr), linestyle = "--", linewidth = 2, label = "Control mean")
+plt.axvline(np.mean(mutant_expr), linestyle = "--", linewidth = 2, label = "Mutant mean")
+plt.xlabel("Average expression")
+plt.ylabel("Frequency")
 plt.legend()
-plt.grid()
+plt.grid(True, alpha = 0.3)
+# plt.savefig("control_vs_mutant_hist.png", dpi=300, bbox_inches="tight")
 plt.show()
 
-# Compute expected frequencies
-cdf_values = norm.cdf(bin_edges, loc = np.mean(observed_data), scale = np.std(observed_data))
-expected_frequencies = sample_size * np.diff(cdf_values)
-# Normalize expected frequencies to match the sum of observed frequencies
-expected_frequencies *= hist.sum() / expected_frequencies.sum()
 
-# Compute Chi-square statistic manually
-chi_square_manual = np.sum((hist - expected_frequencies) ** 2 / expected_frequencies)
-df = num_bins - 1
-p_value_manual, _ = quad(chi2.pdf, chi_square_manual, np.inf, args = (df, ))
-print("\nChi-square Statistic (manual):", chi_square_manual)
-print("P-value:", p_value_manual)
 
-# Compute Chi-square statistic using scipy
-chi_square_scipy, p_value = chisquare(hist, f_exp = expected_frequencies)
-print("\nChi-square Statistic (scipy):", chi_square_scipy)
-print("P-value:", p_value)
+# Hypothesis testing (manual implementation) ..........................................................................
 
-# Interpret result
+# Hypothesis testing (manual implementation) ..........................................................................
+
+print("\nchi2 test:\nCompare distributions of two independent groups")
+
+# H0: mutant expression follows the same distribution as control
+# H1: mutant expression distribution differs from control
+
+# Define common bin edges
+bin_edges = np.histogram_bin_edges(np.concatenate([control_expr, mutant_expr]), bins = bins)
+# Observed frequencies: mutant
+observed, _ = np.histogram(mutant_expr, bins = bin_edges)
+# Expected frequencies: control, scaled to mutant sample size
+expected, _ = np.histogram(control_expr, bins = bin_edges)
+expected = expected * (observed.sum() / expected.sum())
+
+# Remove bins with zero expected count (chi2 requirement)
+mask = expected > 0
+observed = observed[mask]
+expected = expected[mask]
+df = len(observed) - 1
+
+
+
+# Manual chi2 statistic ........................................................................................
+
+chi_square_manual = np.sum((observed - expected) ** 2 / expected)
+p_value_manual = 1 - chi2.cdf(chi_square_manual, df)
+print("\nchi2 test (manual)")
+print(f"chi2 statistic = {chi_square_manual:.5f}")
+print(f"One-sided p-value = {p_value_manual:.5f}")
+
+
+
+# Scipy implementation ...............................................................................................
+
+chi_square_scipy, p_value_scipy = chisquare(observed, f_exp=expected)
+print("\nchi2 test (scipy)")
+print(f"chi2 statistic = {chi_square_scipy:.5f}")
+print(f"One-sided p-value = {p_value_scipy:.5f}")
+
+
+
+# Interpret result (significance level 0.05) ..........................................................................
+
 alpha = 0.05
-if p_value < alpha:
-    print("\nReject H0: The data does not follow a normal distribution.")
+if p_value_manual < alpha:
+    print("\np-value < significance threshold: Reject H0:\n"
+          "Mutant expression distribution differs from control.")
 else:
-    print("\nFail to reject H0: The data follows a normal distribution.")
+    print("\np-value > significance threshold: Accept H0:\n"
+          "No evidence that mutant distribution differs from control.")
 
-# Plot the chi2 distribution
-x = np.linspace(0, 30, 500)
-y = norm.pdf(x, loc = chi_square_manual, scale = np.sqrt(2*df))
-plt.figure(figsize = (8, 6))
-plt.plot(x, y, label = "Chi-square Distribution")
-plt.axvline(chi_square_manual, color = "r", linestyle = "--", label = f"Chi-square Observed: {chi_square_manual:.2f}")
-plt.title("Chi-square Goodness-of-Fit Test")
-plt.xlabel("Chi-square Value")
+
+
+# Plot one-sided p-value ..............................................................................................
+
+# Prepare for plot
+x = np.linspace(0, chi_square_manual + 10, 1000)
+chi_dist = chi2.pdf(x, df)
+
+# Plot chi2-distribution
+plt.figure(figsize = (8, 5))
+plt.plot(x, chi_dist, label = f"chi2 distribution (df = {df})")
+plt.axvline(chi_square_manual, color = "red", linestyle = "--", label = f"Observed χ² = {chi_square_manual:.2f}")
+
+# One-sided rejection region
+plt.fill_between(x, chi_dist, where = (x >= chi_square_manual), color = "red", alpha = 0.3, label = "One-sided p-value")
+plt.xlabel("chi2 value")
 plt.ylabel("Density")
+plt.title("chi2 test (one-sided)")
 plt.legend()
-plt.grid()
+plt.grid(alpha = 0.3)
+# plt.savefig("chi2_test_p_two_sided.png", dpi = 300, bbox_inches = "tight")
+plt.show()
+
+
+
+# Plot two-sided p-value (pedagogical symmetry with t-test) ..........................................................
+
+# NOTE: chi2 is naturally one-sided; this is for illustration only
+
+# Plot chi2-distribution
+plt.figure(figsize = (8, 5))
+plt.plot(x, chi_dist, label = f"chi2 distribution (df = {df})")
+plt.axvline(chi_square_manual, color = "red", linestyle="--", label=f"Observed χ² = {chi_square_manual:.2f}")
+
+# One-tailed rejection region
+lower = chi2.ppf(p_value_manual / 2, df)
+upper = chi2.ppf(1 - p_value_manual / 2, df)
+plt.fill_between(x, chi_dist, where = (x <= lower), color = "red", alpha = 0.3)
+plt.fill_between(x, chi_dist, where = (x >= upper), color = "red", alpha = 0.3, label = "Two-sided p-value")
+plt.xlabel("chi2 value")
+plt.ylabel("Density")
+plt.title("chi2 test (two-sided, illustrative)")
+plt.legend()
+plt.grid(alpha = 0.3)
+# plt.savefig("chi2_test_p_two_sided.png", dpi = 300, bbox_inches = "tight")
 plt.show()

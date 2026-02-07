@@ -10,11 +10,11 @@
 
 # 2. Plot both distributions as a histogram
 
-# 3. Compute manually a Fisher test and compare with scipy implementation: Use the stats.bartlett() and stats.levene() libraries
+# 3. Compute manually a Fisher F statistic and compare with scipy implementation: Use the stats.bartlett() and stats.levene() libraries
 
-# 4. Plot the F distribution with the observed f statistic, and a shaded area representing the one-sided p-value
+# 4. Plot the F distribution with the observed F statistic, and a shaded area representing the one-sided p-value
 
-# 5. Plot the F distribution with the observed f statistic, and a shaded area representing the two-sided p-value
+# 5. Plot the F distribution with the observed F statistic, and a shaded area representing the two-sided p-value
 
 
 
@@ -122,39 +122,41 @@ else:
 
 # Plot one-sided p-value ............................................................................
 
-# Prepare F distribution
+# Prepare for plot
 x = np.linspace(0.01, F_stat + 2, 1000)
 f_dist = f.pdf(x, df1, df2)
 
+# Plot F-distribution
 plt.figure(figsize=(8, 5))
-plt.plot(x, f_dist, label=f"F-distribution (df1={df1}, df2={df2})")
-plt.axvline(F_stat, color="red", linestyle="--", label=f"Observed F = {F_stat:.2f}")
+plt.plot(x, f_dist, label = f"F-distribution (df1={df1}, df2={df2})")
+plt.axvline(F_stat, color = "red", linestyle="--", label = f"Observed F = {F_stat:.2f}")
 
 # One-tailed rejection region
-plt.fill_between( x, f_dist, where=(x >= F_stat), color="red", alpha=0.3, label="One-sided p-value")
-
+plt.fill_between( x, f_dist, where=(x >= F_stat), color = "red", alpha = 0.3, label = "One-sided p-value")
 plt.xlabel("F value")
 plt.ylabel("Density")
 plt.title("One-sided F-test")
 plt.legend()
-plt.grid(alpha=0.3)
+plt.grid(alpha = 0.3)
+# plt.savefig("f_test_p_one_sided.png", dpi = 300, bbox_inches = "tight")
 plt.show()
 
 
 
 # Plot two-sided p-value ............................................................................
 
+# Plot F-distribution
 plt.figure(figsize=(8, 5))
 plt.plot(x, f_dist, label=f"F-distribution (df1={df1}, df2={df2})")
 plt.axvline(F_stat, color="red", linestyle="--", label=f"Observed F = {F_stat:.2f}")
 
-# Lower and upper critical regions
-plt.fill_between(x, f_dist, where=(x <= f.ppf(p_two_sided_manual / 2, df1, df2)), color="red", alpha=0.3)
-plt.fill_between(x, f_dist, where=(x >= f.ppf(1 - p_two_sided_manual / 2, df1, df2)), color="red", alpha=0.3, label="Two-sided p-value")
-
+# Two-tailed rejection region
+plt.fill_between(x, f_dist, where=(x <= f.ppf(p_two_sided_manual / 2, df1, df2)), color = "red", alpha = 0.3)
+plt.fill_between(x, f_dist, where=(x >= f.ppf(1 - p_two_sided_manual / 2, df1, df2)), color = "red", alpha = 0.3, label = "Two-sided p-value")
 plt.xlabel("F value")
 plt.ylabel("Density")
 plt.title("Two-sided F-test")
 plt.legend()
-plt.grid(alpha=0.3)
+plt.grid(alpha = 0.3)
+# plt.savefig("f_test_p_two_sided.png", dpi = 300, bbox_inches = "tight")
 plt.show()

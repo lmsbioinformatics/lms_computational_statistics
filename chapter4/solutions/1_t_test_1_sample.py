@@ -10,7 +10,7 @@
 
 # 2. Plot both distributions as a histogram
 
-# 3. Compute manually a one-sample t-statistic and compare with scipy implementation: Use the stats.ttest_1samp() library
+# 3. Compute manually a one-sample t statistic and compare with scipy implementation: Use the stats.ttest_1samp() library
 
 # 4. Plot the t distribution with the observed t statistic, and a shaded area representing the one-sided p-value
 
@@ -71,8 +71,8 @@ plt.show()
 print("\nOne sample t-test:\nCompare sample mean to hypothesized value")
 
 # H0: mean(control) = mean(mutant)
-# H1 one-sided: mean(control) > mean(mutant)
-# H1 two-sided: mean(control) != mean(mutant)
+# H1 one-sided: mean(mutant) >/< mean(control)
+# H1 two-sided: mean(mutant) != mean(control)
 
 mu = np.mean(control_expr)
 xbar = np.mean(mutant_expr)
@@ -139,13 +139,13 @@ plt.show()
 
 # Plot two-sided p-value ..............................................................................................
 
-# Plot two-sided t distribution 
+# Plot t-distribution 
 plt.figure(figsize = (8, 5))
 plt.plot(x, t_dist, label = f"t-distribution (df = {df})")
 plt.axvline(t_stat, color = "red", linestyle="--", label = f"+t = {t_stat:.2f}")
 plt.axvline(-t_stat, color = "red", linestyle="--", label = f"-t = {-t_stat:.2f}")
 
-# Two-tailed rejection regions
+# Two-tailed rejection region
 plt.fill_between(x, t_dist, where = (x >= abs(t_stat)), color = "red", alpha = 0.3)
 plt.fill_between(x, t_dist, where=(x <= -abs(t_stat)), color = "red", alpha = 0.3, label = "Two-sided p-value")
 plt.xlabel("t value")
